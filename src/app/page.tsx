@@ -1,65 +1,155 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { NeuCard } from "@/components/ui/NeuCard";
+import { MigrationForm } from "@/components/MigrationForm";
+import { PhaseProgress } from "@/components/PhaseProgress";
+import { PlanViewer } from "@/components/PlanViewer";
+import { OutputPanel } from "@/components/OutputPanel";
+import { RetryButton } from "@/components/RetryButton";
+import { MachineViz } from "@/components/MachineViz";
+import { useMigration } from "@/hooks/useMigration";
+import type { MigrationRequest } from "@/lib/schemas/migration";
+import type { Phase } from "@/lib/agent/machine";
 
 export default function Home() {
+  const { state, migrate, retry } = useMigration();
+  const [lastRequest, setLastRequest] = useState<MigrationRequest | null>(null);
+
+  const isActive =
+    state.phase !== null && state.result === null && state.error === null;
+  const sourceFiles = lastRequest?.files ?? [];
+  const activePhase = state.phase as Phase | null;
+
+  function handleSubmit(request: MigrationRequest) {
+    setLastRequest(request);
+    migrate(request);
+  }
+
+  function handleRetry() {
+    if (state.jobId) retry(state.jobId);
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-neu-base px-4 py-8 sm:px-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-700 tracking-tight">
+            Migration Workflow Agent
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-1 text-sm text-gray-500">
+            AI-powered code migration · Analysis → Planning → Execution →
+            Verification
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Main grid: form left, machine viz right on large screens */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+          {/* Left column */}
+          <div className="space-y-6">
+            {/* Form */}
+            <NeuCard>
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">
+                Source Code
+              </h2>
+              <MigrationForm onSubmit={handleSubmit} loading={isActive} />
+            </NeuCard>
+
+            {/* Phase progress + retry */}
+            {state.phase !== null && (
+              <NeuCard>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500">
+                    Progress
+                  </h2>
+                  <RetryButton
+                    retryable={state.retryable}
+                    onRetry={handleRetry}
+                    loading={isActive}
+                  />
+                </div>
+                <PhaseProgress
+                  currentPhase={state.phase}
+                  phaseStatuses={state.phaseStatuses}
+                />
+              </NeuCard>
+            )}
+
+            {/* Error banner */}
+            {state.error && (
+              <NeuCard inset>
+                <p className="text-sm text-red-500">{state.error}</p>
+              </NeuCard>
+            )}
+
+            {/* Plan */}
+            {state.plan && (
+              <NeuCard>
+                <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">
+                  Migration Plan
+                </h2>
+                <PlanViewer
+                  plan={state.plan}
+                  stepStatuses={state.stepStatuses}
+                />
+              </NeuCard>
+            )}
+
+            {/* Output */}
+            {state.result && state.result.migratedFiles.length > 0 && (
+              <NeuCard>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500">
+                    Migrated Files
+                  </h2>
+                  {state.result.verification && (
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        state.result.verification.passed
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-600"
+                      }`}
+                    >
+                      {state.result.verification.passed
+                        ? "Verified ✓"
+                        : "Issues found"}
+                    </span>
+                  )}
+                </div>
+                <OutputPanel
+                  migratedFiles={state.result.migratedFiles}
+                  sourceFiles={sourceFiles}
+                />
+              </NeuCard>
+            )}
+          </div>
+
+          {/* Right column: machine visualization */}
+          <div className="space-y-6">
+            <NeuCard className="sticky top-6">
+              <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">
+                State Machine
+              </h2>
+              <MachineViz activePhase={activePhase} />
+
+              {/* Verification summary */}
+              {state.result?.verification && (
+                <div className="mt-4 space-y-1">
+                  <p className="text-xs text-gray-500">
+                    {state.result.verification.summary}
+                  </p>
+                  {state.result.verification.issues.map((issue, i) => (
+                    <p key={i} className="text-xs text-red-400">
+                      · [{issue.severity}] {issue.file}: {issue.message}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </NeuCard>
+          </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
