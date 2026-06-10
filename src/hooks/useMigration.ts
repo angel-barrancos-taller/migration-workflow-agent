@@ -139,7 +139,7 @@ export function parseSseLine(block: string): ParsedSseLine | null {
   }
 }
 
-async function consumeStream(
+export async function consumeStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   dispatch: (action: SseAction) => void,
 ): Promise<void> {
@@ -157,7 +157,10 @@ async function consumeStream(
     for (const block of blocks) {
       const parsed = parseSseLine(block);
       if (parsed) {
-        dispatch(parsed.data as SseAction);
+        dispatch({
+          type: parsed.event,
+          ...(parsed.data as Record<string, unknown>),
+        } as SseAction);
       }
     }
   }

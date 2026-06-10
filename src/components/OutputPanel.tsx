@@ -14,6 +14,18 @@ interface OutputPanelProps {
   sourceFiles: SourceFile[];
 }
 
+function downloadFile(name: string, content: string) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function OutputPanel({ migratedFiles, sourceFiles }: OutputPanelProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showDiff, setShowDiff] = useState(false);
@@ -56,6 +68,24 @@ export function OutputPanel({ migratedFiles, sourceFiles }: OutputPanelProps) {
             }`}
           >
             Diff
+          </button>
+        )}
+        {active && (
+          <button
+            type="button"
+            onClick={() => downloadFile(active.name, active.content)}
+            className="rounded-lg bg-neu-base px-3 py-1.5 text-xs font-medium text-gray-500 shadow-neu transition-all hover:text-gray-700"
+          >
+            Download
+          </button>
+        )}
+        {migratedFiles.length > 1 && (
+          <button
+            type="button"
+            onClick={() => migratedFiles.forEach((f) => downloadFile(f.name, f.content))}
+            className="rounded-lg bg-neu-base px-3 py-1.5 text-xs font-medium text-gray-500 shadow-neu transition-all hover:text-gray-700"
+          >
+            Download All
           </button>
         )}
       </div>

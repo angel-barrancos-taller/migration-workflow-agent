@@ -41,7 +41,6 @@ const config: Config = {
       },
       moduleNameMapper: {
         "^@/(.*)$": "<rootDir>/src/$1",
-        "^@xyflow/react$": "<rootDir>/src/__mocks__/@xyflow/react.tsx",
       },
       setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
     },

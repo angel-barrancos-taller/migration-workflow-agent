@@ -7,10 +7,8 @@ import { PhaseProgress } from "@/components/PhaseProgress";
 import { PlanViewer } from "@/components/PlanViewer";
 import { OutputPanel } from "@/components/OutputPanel";
 import { RetryButton } from "@/components/RetryButton";
-import { MachineViz } from "@/components/MachineViz";
 import { useMigration } from "@/hooks/useMigration";
 import type { MigrationRequest } from "@/lib/schemas/migration";
-import type { Phase } from "@/lib/agent/machine";
 
 export default function Home() {
   const { state, migrate, retry } = useMigration();
@@ -19,7 +17,6 @@ export default function Home() {
   const isActive =
     state.phase !== null && state.result === null && state.error === null;
   const sourceFiles = lastRequest?.files ?? [];
-  const activePhase = state.phase as Phase | null;
 
   function handleSubmit(request: MigrationRequest) {
     setLastRequest(request);
@@ -44,10 +41,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Main grid: form left, machine viz right on large screens */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-          {/* Left column */}
-          <div className="space-y-6">
+        <div className="space-y-6">
             {/* Form */}
             <NeuCard>
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">
@@ -121,33 +115,22 @@ export default function Home() {
                   migratedFiles={state.result.migratedFiles}
                   sourceFiles={sourceFiles}
                 />
+
+                {/* Verification summary */}
+                {state.result.verification && (
+                  <div className="mt-4 space-y-1">
+                    <p className="text-xs text-gray-500">
+                      {state.result.verification.summary}
+                    </p>
+                    {state.result.verification.issues.map((issue, i) => (
+                      <p key={i} className="text-xs text-red-400">
+                        · [{issue.severity}] {issue.file}: {issue.message}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </NeuCard>
             )}
-          </div>
-
-          {/* Right column: machine visualization */}
-          <div className="space-y-6">
-            <NeuCard className="sticky top-6">
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-gray-500">
-                State Machine
-              </h2>
-              <MachineViz activePhase={activePhase} />
-
-              {/* Verification summary */}
-              {state.result?.verification && (
-                <div className="mt-4 space-y-1">
-                  <p className="text-xs text-gray-500">
-                    {state.result.verification.summary}
-                  </p>
-                  {state.result.verification.issues.map((issue, i) => (
-                    <p key={i} className="text-xs text-red-400">
-                      · [{issue.severity}] {issue.file}: {issue.message}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </NeuCard>
-          </div>
         </div>
       </div>
     </main>

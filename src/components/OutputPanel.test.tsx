@@ -41,4 +41,27 @@ describe('OutputPanel', () => {
     render(<OutputPanel migratedFiles={files} sourceFiles={sourceFiles} />);
     expect(screen.getByRole('button', { name: /diff/i })).toBeInTheDocument();
   });
+
+  it('downloads the active file when Download is clicked', async () => {
+    const user = userEvent.setup();
+    const createObjectURL = jest.fn(() => 'blob:mock');
+    const revokeObjectURL = jest.fn();
+    URL.createObjectURL = createObjectURL;
+    URL.revokeObjectURL = revokeObjectURL;
+    const clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    render(<OutputPanel migratedFiles={files} sourceFiles={sourceFiles} />);
+    await user.click(screen.getByRole('button', { name: /^download$/i }));
+
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+
+    clickSpy.mockRestore();
+  });
+
+  it('renders Download All when there are multiple files', () => {
+    render(<OutputPanel migratedFiles={files} sourceFiles={sourceFiles} />);
+    expect(screen.getByRole('button', { name: /download all/i })).toBeInTheDocument();
+  });
 });

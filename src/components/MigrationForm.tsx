@@ -56,6 +56,7 @@ export function MigrationForm({ onSubmit, loading }: MigrationFormProps) {
   const [target, setTarget] = useState<Framework>('vue');
 
   const availableTargets = getTargetsForSource(source);
+  const hasValidFile = files.some((f) => f.name.trim() && f.content.trim());
 
   function handleSourceChange(newSource: Framework) {
     setSource(newSource);
@@ -172,7 +173,7 @@ export function MigrationForm({ onSubmit, loading }: MigrationFormProps) {
       </div>
 
       {/* Submit */}
-      <NeuButton type="submit" variant="primary" disabled={loading} className="w-full py-3 text-base">
+      <NeuButton type="submit" variant="primary" disabled={loading || !hasValidFile} className="w-full py-3 text-base">
         {loading ? 'Migrating…' : 'Migrate →'}
       </NeuButton>
     </form>

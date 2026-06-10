@@ -1,6 +1,8 @@
+import { TextEncoder } from "util";
 import {
   migrationReducer,
   parseSseLine,
+  consumeStream,
   type MigrationState,
 } from "./useMigration";
 
@@ -133,5 +135,54 @@ describe("parseSseLine", () => {
   it("returns null for malformed data JSON", () => {
     const block = "event: test\ndata: not-valid-json";
     expect(parseSseLine(block)).toBeNull();
+  });
+});
+
+// ── consumeStream tests ─────────────────────────────────────────────────────
+
+describe("consumeStream", () => {
+  it("dispatches a 'result' SSE event (whose payload has no type field) as a result action", async () => {
+    const result = {
+      success: true,
+      jobId: "abc",
+      migratedFiles: [
+        {
+          name: "App.vue",
+          content: "<template></template>",
+          sourceFile: "App.tsx",
+        },
+      ],
+      plan: { strategy: "s", steps: [] },
+      verification: null,
+      errors: [],
+    };
+
+    const sse =
+      `event: job\ndata: {"jobId":"abc"}\n\n` +
+      `event: result\ndata: ${JSON.stringify(result)}\n\n`;
+
+    const encoder = new TextEncoder();
+    const chunk = encoder.encode(sse);
+    let read = false;
+    const reader = {
+      read: jest.fn().mockImplementation(async () => {
+        if (read) return { done: true, value: undefined };
+        read = true;
+        return { done: false, value: chunk };
+      }),
+    } as unknown as ReadableStreamDefaultReader<Uint8Array>;
+
+    const dispatch = jest.fn();
+    await consumeStream(reader, dispatch);
+
+    expect(dispatch).toHaveBeenCalledWith({ type: "job", jobId: "abc" });
+    expect(dispatch).toHaveBeenCalledWith({ type: "result", ...result });
+
+    let state = initialState;
+    for (const call of dispatch.mock.calls) {
+      state = migrationReducer(state, call[0]);
+    }
+    expect(state.status).toBe("done");
+    expect(state.result?.migratedFiles).toHaveLength(1);
   });
 });

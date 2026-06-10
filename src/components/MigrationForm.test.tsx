@@ -58,6 +58,23 @@ describe('MigrationForm', () => {
     expect(screen.getByRole('button', { name: /migrat/i })).toBeDisabled();
   });
 
+  it('disables submit button when there is no valid file', () => {
+    render(<MigrationForm onSubmit={jest.fn()} loading={false} />);
+    expect(screen.getByRole('button', { name: /migrate/i })).toBeDisabled();
+  });
+
+  it('enables submit button once a file has both a name and content', async () => {
+    const user = userEvent.setup();
+    render(<MigrationForm onSubmit={jest.fn()} loading={false} />);
+
+    expect(screen.getByRole('button', { name: /migrate/i })).toBeDisabled();
+
+    await user.type(screen.getByPlaceholderText(/filename/i), 'App.tsx');
+    await user.type(screen.getByPlaceholderText(/paste.*code/i), 'const x = 1');
+
+    expect(screen.getByRole('button', { name: /migrate/i })).toBeEnabled();
+  });
+
   it('loads a sample preset when the sample button is clicked', async () => {
     const user = userEvent.setup();
     render(<MigrationForm onSubmit={jest.fn()} loading={false} />);
